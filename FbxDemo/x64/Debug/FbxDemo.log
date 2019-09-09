@@ -1,0 +1,15 @@
+﻿  Common.cxx
+  DisplayAnimation.cxx
+  DisplayCommon.cxx
+  DisplaySkeleton.cxx
+  Generating Code...
+  exporterImporterHeaders.cpp
+  main.cxx
+  PrintLight.cpp
+  PrintInfo.cpp
+  PrintMaterial.cpp
+  PrintMesh.cpp
+C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\main.cxx(408,22): warning C4018:  '<': signed/unsigned mismatch
+  Generating Code...
+C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\PrintMesh.cpp(307,108): warning C4267:  'argument': conversion from 'size_t' to 'int', possible loss of data
+  FbxDemo.vcxproj -> C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\FbxDemo.exe
