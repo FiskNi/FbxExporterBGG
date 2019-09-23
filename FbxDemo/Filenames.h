@@ -1,8 +1,5 @@
 #pragma once
 
-
-
-
 #include "DisplayCommon.h"
 
 #include <fbxsdk.h>
@@ -17,8 +14,8 @@ using namespace std;
 #define NAME_SIZE 256
 
 // Filepaths can be input manually here or be recieved as inputs with -i <path> -o <path>
-const std::string IN_FBX_FILEPATH	= "D:/!VisualStudio/FiskNi/Project-Kiddo/Resources/Assets/WIP/Maya Scenes/TestScene.fbx";
-const std::string OUTPUT_PATH		= "D:/!VisualStudio/FiskNi/Project-Kiddo/Resources/Assets/WIP/Maya Scenes/TestSceneasd";
+const std::string IN_FBX_FILEPATH = "";
+const std::string OUTPUT_PATH = "";
 
 // File header
 struct MehHeader
@@ -65,24 +62,19 @@ struct Skeleton
 // Mesh data
 struct Mesh		// Type 1;
 {
-	char	name[NAME_SIZE];
-	int		materialID;
+	char name[NAME_SIZE];
+	int materialID;
 
-	float	translation[3];
-	float	rotation[3];
-	float	scale[3];
+	float translation[3];
+	float rotation[3];
+	float scale[3];
 
 	bool isChild;
 	char parentName[NAME_SIZE];
 	int parentType;
 
-	int type;
-	int link;
-	int dir;
-	float dist;
-	int collect;
-
-	unsigned int vertexCount;
+	int vertexCount;
+	int faceCount;
 
 	Skeleton skeleton;
 };
@@ -100,6 +92,11 @@ struct Vertex
 	float weight[4];
 };
 
+struct Face
+{
+	int indices[3];
+};
+
 struct PhongMaterial
 {
 	char	name[NAME_SIZE];
@@ -112,7 +109,6 @@ struct PhongMaterial
 	char	albedo[NAME_SIZE];
 	char	normal[NAME_SIZE];
 };
-
 
 // Joint data (parsed)
 struct Joint
@@ -165,8 +161,6 @@ struct PointLight
 	float intensity;
 };
 
-//
-//
 // =============== Temporary fbx data ===============
 struct MeshSkeleton
 {
@@ -245,14 +239,11 @@ struct MeshHolder
 	// Might make this into a vector
 	//vector<Vertex> vertices;
 	int vertexCount;
-	Vertex* vertices;
-	SkeletonHolder skeleton;
+	int faceCount;
 
-	int type;
-	int link;
-	int dir;
-	float dist;
-	int collect;
+	Vertex* vertices;
+	Face* faces;
+	SkeletonHolder skeleton;
 
 	// Constructor that may not be needed
 	MeshHolder()

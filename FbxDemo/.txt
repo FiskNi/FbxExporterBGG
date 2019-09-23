@@ -1,0 +1,13 @@
+//v File Header --------------------
+    Mesh count
+0
+    Mesh Group count
+0
+    Material count
+0
+    Point Light count
+0
+    Directional count
+0
+//^ File Header --------------------
+

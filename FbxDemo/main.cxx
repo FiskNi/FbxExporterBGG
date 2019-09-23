@@ -10,12 +10,6 @@
 ****************************************************************************************/
 
 
-/*========================================================================================================================
-	This is the main file of the FBX to Custom Binary Converter for Group 3 in UD1446: Small Game Project
-	To decide the filenames for output, see Filenames.h
-========================================================================================================================*/
-
-// MM: The Common.h include has a lot of the FBX SDK defined functions and types like FBXSDK_printf
 #include "../Common/Common.h"
 #include "DisplaySkeleton.h"
 #include "DisplayAnimation.h"
@@ -35,7 +29,7 @@ using namespace std;
 
 // Local function prototypes.
 void PrintContent(FbxNode* pNode, vector<Group>& fillGroup, vector<MeshHolder>& mesh, vector<PhongMaterial>& mats, vector<DirLight>& dirLight, vector<PointLight>& pointLight, vector<Camera>& camera,
-	bool isChild, int parentType, bool wg, bool wme, bool wma, bool ws, bool wa, bool wl);
+	bool isChild, int parentType, bool wg, bool wme, bool wma, bool ws, bool wa, bool wl, std::string outputPath);
 void DisplayPivotsAndLimits(FbxNode* pNode);
 
 
@@ -55,17 +49,17 @@ int main(int argc, char** argv)
     InitializeSdkObjects(lSdkManager, fileScene);
 
 	// This is wherethe in fbx filepath should be added comming in from the CMD
-	FbxString lFilePath = IN_FBX_FILEPATH.c_str();
-	string outputPath = OUTPUT_PATH;
-
+	FbxString lFilePath = "";
+	string outputName = "exportedFile"; 
+	string outputFilepath = "Exports/";
 
 	// In commandline parameters
-	bool writeGroups		= false;
-	bool writeMeshes		= true;
-	bool writeMaterials		= true;
-	bool writeSkeletons		= true;
-	bool writeAnimations	= true;
-	bool writeLights		= true;
+	bool writeGroups = false;
+	bool writeMeshes = true;
+	bool writeMaterials = true;
+	bool writeSkeletons = true;
+	bool writeAnimations = true;
+	bool writeLights = true;
 
 	vector<string> inParameters;
 	for (int i = 0; i < argc; i++)
@@ -83,11 +77,13 @@ int main(int argc, char** argv)
 			writeAnimations = false;
 		if ((string)argv[i] == "-nolights")
 			writeLights = false;
-
 		if ((string)argv[i] == "-i")
 			lFilePath = argv[i + 1];
-		if ((string)argv[i] == "-o")
-			outputPath = argv[i + 1];
+		if ((string)argv[i] == "-n")
+		{
+			outputName = argv[i + 1];
+			outputFilepath = outputFilepath += outputName;
+		}
 
 		if ((string)argv[i] == "-h")
 		{
@@ -98,14 +94,16 @@ int main(int argc, char** argv)
 			std::cout << "-noskeleton		| excludes skeletons from the export" << std::endl << std::endl;
 			std::cout << "-noanimation		| excludes animations from the export" << std::endl << std::endl;
 			std::cout << "-nolights		| excludes lights from the export" << std::endl << std::endl;
-			std::cout << "-i		| input filepath" << std::endl << std::endl;
-			std::cout << "-o		| output filepath" << std::endl << std::endl;
+			std::cout << "-i			| input filepath" << std::endl << std::endl;
+			std::cout << "-n			| output filename" << std::endl << std::endl;
 		}
 	}
 
+	
+
 	// Load the scene.
 	lResult = lImporter->Initialize(lFilePath, -1, lSdkManager->GetIOSettings());
-	if (lResult || lFilePath == "" || outputPath == "")
+	if (lResult && lFilePath != "" && outputName != "")
 	{
 		ios->SetBoolProp(IMP_FBX_MATERIAL, true);
 		ios->SetBoolProp(IMP_FBX_TEXTURE, true);
@@ -115,10 +113,6 @@ int main(int argc, char** argv)
 		ios->SetBoolProp(IMP_FBX_ANIMATION, true);
 		ios->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
 		lResult = lImporter->Import(fileScene);
-
-
-
-
 
 
 		
@@ -155,15 +149,9 @@ int main(int argc, char** argv)
 			for (int i = 0; i < elementCount; i++)
 			{
 				PrintContent(sceneRootNode->GetChild(i), groups, meshData, materials, dirLights, pointLight, cameras,
-					false, -1, writeGroups, writeMeshes, writeMaterials, writeSkeletons, writeAnimations, writeLights);
+					false, -1, writeGroups, writeMeshes, writeMaterials, writeSkeletons, writeAnimations, writeLights, outputFilepath);
 			}
 		}
-
-
-
-
-
-
 
 
 		//	===== Parse data ==================================================
@@ -228,14 +216,9 @@ int main(int argc, char** argv)
 				skeleD[i].joint[j] = fillJoint;
 			}
 
-			// Custom attribute
-			fillMesh.type = meshData[i].type;
-			fillMesh.link = meshData[i].link;
-			fillMesh.dir = meshData[i].dir;
-			fillMesh.dist = meshData[i].dist;
-			fillMesh.collect = meshData[i].collect;
 			// Vertex count
 			fillMesh.vertexCount = meshData[i].vertexCount;
+			fillMesh.faceCount = meshData[i].faceCount;
 
 			// Animations
 			anisD.resize((anisD.size() + 1));
@@ -285,10 +268,6 @@ int main(int argc, char** argv)
 
 
 
-
-
-
-
 		std::cout << "Writing to ascii..." << std::endl;
 		// ===== Ascii debug file ==================================================
 		// This file is only for debugging purposes and is used to read and compare the data to the binary data.
@@ -297,7 +276,8 @@ int main(int argc, char** argv)
 		// Everything noted as *Binary data is what is going to be written to the binary file later on. Everything else are comments or debug information.
 		//	========================================================================
 		ofstream asciiFile2;
-		asciiFile2.open(outputPath + ".txt");	// This is where out the filepath should be added comming in from the CMD
+		asciiFile2.open(outputFilepath + ".txt");
+
 		asciiFile2 << fixed << setprecision(10) ;
 
 		// - 1 File header
@@ -313,7 +293,6 @@ int main(int argc, char** argv)
 		asciiFile2 << fileHeader.pointLightCount << endl;			//* Binary data
 		asciiFile2 << "    Directional count" << endl;
 		asciiFile2 << fileHeader.dirLightCount << endl;				//* Binary data
-		asciiFile2 << "//^ File Header --------------------" << endl << endl;
 
 		// - 2 Groups
 		for (int i = 0; i < fileHeader.groupCount; i++)
@@ -347,7 +326,6 @@ int main(int argc, char** argv)
 			asciiFile2 << "    Parent type: " << endl;
 			asciiFile2 << groups[i].parentType << endl;
 
-			asciiFile2 << "//^ Group " << i << " --------------------" << endl << endl;
 			asciiFile2 << endl;
 		}
 
@@ -378,21 +356,14 @@ int main(int argc, char** argv)
 			asciiFile2 << meshes[i].parentName << endl;
 			asciiFile2 << "    Parent type: " << endl;
 			asciiFile2 << meshes[i].parentType << endl;			
-			// 3.5 Entity attributes
-			asciiFile2 << "  # Attribute type: " << endl;
-			asciiFile2 << meshes[i].type << endl;					//* Binary data
-			asciiFile2 << "  # Attribute link: " << endl;
-			asciiFile2 << meshes[i].link << endl;					//* Binary data
-			asciiFile2 << "  # Attribute dir: " << endl;
-			asciiFile2 << meshes[i].dir << endl;					//* Binary data
-			asciiFile2 << "  # Attribute dist: " << endl;
-			asciiFile2 << meshes[i].dist << endl;					//* Binary data
-			asciiFile2 << "  # Attribute collect: " << endl;
-			asciiFile2 << meshes[i].collect << endl;
-																	// 3.6 Vertex count
+			
+			// 3.6 Vertex count
 			asciiFile2 << "  # Vertex count: " << endl;
 			asciiFile2 << meshes[i].vertexCount << endl;			//* Binary data
 
+			asciiFile2 << "  # Face count: " << endl;
+			asciiFile2 << meshes[i].faceCount << endl;			//* Binary data
+			
 			// 3.7 Skeleton
 			asciiFile2 << "    Joint count: " << endl;
 			asciiFile2 << meshes[i].skeleton.jointCount << endl;
@@ -401,13 +372,12 @@ int main(int argc, char** argv)
 			asciiFile2 << "    Animation count: " << endl;
 			asciiFile2 << meshes[i].skeleton.aniCount << endl;
 
-			asciiFile2 << "//^ Mesh " << i << " Header " <<  " --------------------" << endl << endl;
 		
 			// ========================================================= Vertices
 			asciiFile2 << "    //v Mesh " << i << " Vertices " << " --------------------" << endl;
 			for (int j = 0; j < meshes[i].vertexCount; j++)
 			{
-				asciiFile2 << "    ~ " << j << " Vertex position / " << "uv / " << "normal / " << "tangent / " << "binormal " << endl;
+				asciiFile2 << "    ~ " << j << " Vertex position / " << "uv / " << "normal / " << "tangent / " << "binormal / " << "weight / " << "bone / " << endl;
 				//v Binary data
 				asciiFile2 << meshData[i].vertices[j].position[0]	<< ", "	<< meshData[i].vertices[j].position[1]	<< ", "	<< meshData[i].vertices[j].position[2] << endl; 
 				asciiFile2 << meshData[i].vertices[j].uv[0]			<< ", "	<< meshData[i].vertices[j].uv[1]		<< ", "	<< endl;
@@ -418,7 +388,16 @@ int main(int argc, char** argv)
 				asciiFile2 << meshData[i].vertices[j].bone[0] << ", " << meshData[i].vertices[j].bone[1] << ", " << meshData[i].vertices[j].bone[2] << ", " << meshData[i].vertices[j].bone[3] << endl;
 				//^ Binary data
 			}
-			asciiFile2 << "    //^ Mesh " << i << " Vertices " << " --------------------" << endl << endl;
+			// ======================== ~
+
+			// ========================================================= Faces
+			asciiFile2 << "    //v Mesh " << i << " Faces " << " --------------------" << endl;
+			for (int f = 0; f < meshes[i].faceCount; f++)
+			{
+				asciiFile2 << "    ~ " << f << " Face index " << endl;
+				//v Binary data
+				asciiFile2 << meshData[i].faces[f].indices[0] << ", " << meshData[i].faces[f].indices[1] << ", " << meshData[i].faces[f].indices[2] << endl;
+			}
 			// ======================== ~
 
 			// ========================================================= Joints		
@@ -439,7 +418,6 @@ int main(int argc, char** argv)
 				}
 				asciiFile2 << endl;
 			}
-			asciiFile2 << "    //^ Mesh " << i << " Joints " << " --------------------" << endl << endl;
 			// ======================== ~
 
 
@@ -493,10 +471,8 @@ int main(int argc, char** argv)
 					}
 					// ======================== ~
 				}
-				asciiFile2 << "    //^ Animation " << a << " Keyframes " << " --------------------" << endl << endl;
 				// ======================== ~
 			}
-			asciiFile2 << "    //^ Mesh " << i << " Animations " << " --------------------" << endl << endl;
 		}
 
 		// - 5 Materials
@@ -563,11 +539,6 @@ int main(int argc, char** argv)
 		
 
 
-
-
-
-
-
 		std::cout << "Writing to binary..." << std::endl;
 		// ===== Binary file file ==================================================
 		// This is used to directly write binary data to the file
@@ -576,7 +547,7 @@ int main(int argc, char** argv)
 		// and format it in the same way upon reading.
 		//	========================================================================
 		std::cout << "Writing binary header..." << std::endl;
-		ofstream binaryFile(outputPath + ".meh", ofstream::binary);	// This is where out the filepath should be added comming in from the CMD
+		ofstream binaryFile(outputFilepath + ".mesh", ofstream::binary);	// This is where out the filepath should be added comming in from the CMD
 		// - 1 File Header
 		binaryFile.write((char*)&fileHeader, sizeof(MehHeader));
 		// - 2 Groups
@@ -593,7 +564,11 @@ int main(int argc, char** argv)
 			binaryFile.write((char*)&meshes[i], sizeof(Mesh));
 
 			// 3.2 Vertices
+
 			binaryFile.write((char*)meshData[i].vertices, sizeof(Vertex) * meshes[i].vertexCount);
+			
+			// Faces
+			binaryFile.write((char*)meshData[i].faces, sizeof(Face) * meshes[i].faceCount);
 
 			// 3.3 Joints
 			for (int j = 0; j < meshes[i].skeleton.jointCount; j++)
@@ -675,7 +650,7 @@ int main(int argc, char** argv)
 	PrintContent recursively prints all information in a node (and its children), determined by the type of the node.
 ========================================================================================================================*/
 void PrintContent(FbxNode* pNode, vector<Group>& groups, vector<MeshHolder>& meshes, vector<PhongMaterial>& mats, vector<DirLight>& dirLight, vector<PointLight>& pointLight, vector<Camera>& camera,
-	bool isChild, int parentType, bool wg, bool wme, bool wma, bool ws, bool wa, bool wl)
+	bool isChild, int parentType, bool wg, bool wme, bool wma, bool ws, bool wa, bool wl, std::string outputPath)
 {
 	// This will check what type this node is
 	// All the cases represent the different types
@@ -770,7 +745,7 @@ void PrintContent(FbxNode* pNode, vector<Group>& groups, vector<MeshHolder>& mes
 				fillMesh.scale[0] = (float)scale[0];
 				fillMesh.scale[1] = (float)scale[1];
 				fillMesh.scale[2] = (float)scale[2];
-				GetMesh(pNode, &fillMesh, mats);
+				GetMesh(pNode, &fillMesh, mats, outputPath);
 				fillMesh.isChild = isChild;
 				for (int j = 0; j < pNameLength; j++)
 					fillMesh.parentName[j] = pNameBuffer[j];
@@ -817,7 +792,7 @@ void PrintContent(FbxNode* pNode, vector<Group>& groups, vector<MeshHolder>& mes
 	// Loops through all the children of this node
 	for (int i = 0; i < pNode->GetChildCount(); i++)
 	{
-		PrintContent(pNode->GetChild(i), groups, meshes, mats, dirLight, pointLight, camera, true, parentType, wg, wme, wma, ws, wa, wl);
+		PrintContent(pNode->GetChild(i), groups, meshes, mats, dirLight, pointLight, camera, true, parentType, wg, wme, wma, ws, wa, wl, outputPath);
 		//PrintContent(pNode->GetChild(i), &fillMesh, &fillDirLight, &fillSpotLight, mats);
 	}
 }
