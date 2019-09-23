@@ -1,2 +1,3 @@
 ﻿  PrintMesh.cpp
+C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\PrintMesh.cpp(73,40): warning C4267:  'initializing': conversion from 'size_t' to 'int', possible loss of data
   FbxDemo.vcxproj -> C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\FbxDemo.exe

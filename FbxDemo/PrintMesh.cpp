@@ -31,89 +31,91 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 	FbxVector4* lControlPoints = fbxMesh->GetControlPoints();
 
 	// Get vertex positions
-	int vtxCount = fbxMesh->GetControlPointsCount();
+	int vtxCount = fbxMesh->GetPolygonVertexCount();
 	Vertex *vertices = new Vertex[vtxCount];
 	mesh->vertices = new Vertex[vtxCount];
-	zeroValues(vertices);
-
-
-	for (int v = 0; v < vtxCount; v++)
-	{
-		vertices[v].position[0] = (float)lControlPoints[v][0];
-		vertices[v].position[1] = (float)lControlPoints[v][1];
-		vertices[v].position[2] = (float)lControlPoints[v][2];
-	}
 
 	// Get faces
 	int faceCount = fbxMesh->GetPolygonCount();
-	mesh->faces = new Face[faceCount];
-	Face* faces = new Face[faceCount];
+	mesh->faces = new Face[vtxCount];
+	Face* indexBuffer = new Face[vtxCount];
+
+
+	vector<Vertex> tempVertices;
 	int faceIndex = 0;
+	int bufferIndex = 0;
 	for (int f = 0; f < faceCount; f++)
 	{
 		// Face has 3 vertices
 		for (int polyVertIndex = 0; polyVertIndex < 3; polyVertIndex++)
 		{
 			int vertexIndex = (int)fbxMesh->GetPolygonVertex(f, polyVertIndex);
-			
-			faces[f].indices[polyVertIndex] = vertexIndex;
 
 			FbxVector2 uv2 = GetUV(fbxMesh->GetElementUV(), faceIndex, vertexIndex);
 			FbxVector4 normal4 = GetNormal(fbxMesh->GetElementNormal(), faceIndex, vertexIndex);
+			Vertex tempVertex;
+			
+			tempVertex.position[0] = (float)lControlPoints[vertexIndex][0];
+			tempVertex.position[1] = (float)lControlPoints[vertexIndex][1];
+			tempVertex.position[2] = (float)lControlPoints[vertexIndex][2];
 
-			vertices[vertexIndex].uv[0] = (float)uv2[0];
-			vertices[vertexIndex].uv[1] = (float)uv2[1];
+			tempVertex.uv[0] = (float)uv2[0];
+			tempVertex.uv[1] = (float)uv2[1];
 
-			vertices[vertexIndex].normal[0] = (float)normal4[0];
-			vertices[vertexIndex].normal[1] = (float)normal4[1];
-			vertices[vertexIndex].normal[2] = (float)normal4[2];
+			tempVertex.normal[0] = (float)normal4[0];
+			tempVertex.normal[1] = (float)normal4[1];
+			tempVertex.normal[2] = (float)normal4[2];
+
+			indexBuffer[f].indices[polyVertIndex] = bufferIndex;
+
+			bufferIndex++;
+			bool pushBack = true;
+			for (int c = tempVertices.size() - 1; c >= 0; c--)
+				if (tempVertex.position[0] == tempVertices[c].position[0])
+					if (tempVertex.position[1] == tempVertices[c].position[1])
+						if (tempVertex.position[2] == tempVertices[c].position[2])
+							if (tempVertex.uv[0] == tempVertices[c].uv[0])
+								if (tempVertex.uv[1] == tempVertices[c].uv[1])
+									if (tempVertex.normal[0] == tempVertices[c].normal[0])
+										if (tempVertex.normal[1] == tempVertices[c].normal[1])
+											if (tempVertex.normal[2] == tempVertices[c].normal[2])
+											{
+												// Same vertex
+												bufferIndex--;
+												indexBuffer[f].indices[polyVertIndex] = indexBuffer[c].indices[polyVertIndex];
+												pushBack = false;
+											}
+			if (pushBack)
+				tempVertices.push_back(tempVertex);
+
+
 			faceIndex++;
 		}
-
-
 	}
 
+	
+	Vertex* newVertices = new Vertex[bufferIndex];
+	for (int v = 0; v < tempVertices.size(); v++)
+	{
+		newVertices[v] = tempVertices[v];
+	}
+
+
+
+
 	// Copy vertex and face data
-	mesh->vertexCount = vtxCount;
-	mesh->faceCount = faceCount;
-	memcpy(mesh->vertices, vertices, sizeof(Vertex) * vtxCount);
-	memcpy(mesh->faces, faces, sizeof(Face) * faceCount);
+	mesh->vertexCount = bufferIndex;
+	mesh->faceCount = vtxCount;
+	memcpy(mesh->vertices, newVertices, sizeof(Vertex) * bufferIndex);
+	memcpy(mesh->faces, indexBuffer, sizeof(Face) * vtxCount);
 
 
 	// MDelete the allocated memory for vertices
 	if (vertices)
 		delete[] vertices;
-	if (faces)
-		delete[] faces;
+	if (indexBuffer)
+		delete[] indexBuffer;
 }
-
-void zeroValues(Vertex* vertices)
-{
-	vertices->position[0] = 0;
-	vertices->position[1] = 0;
-	vertices->position[2] = 0;
-
-	vertices->uv[0] = 0;
-	vertices->uv[1] = 0;
-
-	vertices->normal[0] = 0;
-	vertices->normal[1] = 0;
-	vertices->normal[2] = 0;
-
-	vertices->tangent[0] = 0;
-	vertices->tangent[1] = 0;
-	vertices->tangent[2] = 0;
-
-	vertices->bitangent[0] = 0;
-	vertices->bitangent[1] = 0;
-	vertices->bitangent[2] = 0;
-
-	vertices->weight[0] = 0;
-	vertices->weight[1] = 0;
-	vertices->weight[2] = 0;
-	vertices->weight[3] = 0;
-}
-
 
 void GetSkin(FbxMesh* fbxMesh, FbxGeometry* fbxGeo, MeshHolder* mesh)
 {
@@ -218,12 +220,12 @@ void MinMaxWeights(fbxsdk::FbxSkin* skin, std::vector<SkinData>& controlPointSki
 	for (int boneIndex = 0; boneIndex < skin->GetClusterCount(); boneIndex++)
 	{
 		FbxCluster* cluster = skin->GetCluster(boneIndex);					// One cluster is a collection of weights for a bone
-		int* indices = cluster->GetControlPointIndices();					// Control point indices for bone at boneIndex
+		int* index = cluster->GetControlPointIndices();					// Control point indices for bone at boneIndex
 		double* weights = cluster->GetControlPointWeights();				// matching weights for each vertex
 		for (int x = 0; x < cluster->GetControlPointIndicesCount(); x++)
 		{
 			// Weights for one control point (vertex)
-			SkinData& ctrlPoint = controlPointSkinData[indices[x]];
+			SkinData& ctrlPoint = controlPointSkinData[index[x]];
 			// this block of code checks if the new weight is higher than the smallest existing weight
 			// If it is, it means we have to drop/replace and find the new minimum for the next control point.
 			if (weights[x] > ctrlPoint.minWeight)

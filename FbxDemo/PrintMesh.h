@@ -17,7 +17,6 @@ typedef struct SkinData
 void DisplayUserProperties(FbxObject* pObject, MeshHolder* mesh);
 void GetMesh(FbxNode* pNode, MeshHolder* mesh, vector<PhongMaterial>& materials, std::string outputPath);
 void GetPolygons(FbxMesh* pMesh, MeshHolder* mesh);
-void zeroValues(Vertex* mesh);
 
 void GetSkin(FbxMesh* fbxMesh, FbxGeometry* fbxGeo, MeshHolder* mesh);
 void GetAnimation(fbxsdk::FbxMesh* fbxMesh, MeshHolder* mesh, fbxsdk::FbxSkin* skin);

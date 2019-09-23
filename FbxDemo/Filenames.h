@@ -90,6 +90,39 @@ struct Vertex
 
 	float bone[4];
 	float weight[4];
+
+	Vertex()
+	{
+		position[0] = 0;
+		position[1] = 0;
+		position[2] = 0;
+
+		uv[0] = 0;
+		uv[1] = 0;
+
+		normal[0] = 0;
+		normal[1] = 0;
+		normal[2] = 0;
+
+		tangent[0] = 0;
+		tangent[1] = 0;
+		tangent[2] = 0;
+
+		bitangent[0] = 0;
+		bitangent[1] = 0;
+		bitangent[2] = 0;
+
+		bone[0] = 0;
+		bone[1] = 0;
+		bone[2] = 0;
+		bone[3] = 0;
+
+		weight[0] = 0;
+		weight[1] = 0;
+		weight[2] = 0;
+		weight[3] = 0;
+
+	}
 };
 
 struct Face
