@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <fstream>
 #include <cstdio>
+#include <math.h> 
 
 using namespace std;
 #define NAME_SIZE 256

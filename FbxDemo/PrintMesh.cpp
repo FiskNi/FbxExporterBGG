@@ -37,8 +37,8 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 
 	// Get faces
 	int faceCount = fbxMesh->GetPolygonCount();
-	mesh->faces = new Face[vtxCount];
-	Face* indexBuffer = new Face[vtxCount];
+	mesh->faces = new Face[faceCount];
+	Face* indexBuffer = new Face[faceCount];
 
 
 	vector<Vertex> tempVertices;
@@ -49,6 +49,7 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 		// Face has 3 vertices
 		for (int polyVertIndex = 0; polyVertIndex < 3; polyVertIndex++)
 		{
+
 			int vertexIndex = (int)fbxMesh->GetPolygonVertex(f, polyVertIndex);
 
 			FbxVector2 uv2 = GetUV(fbxMesh->GetElementUV(), faceIndex, vertexIndex);
@@ -66,27 +67,33 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 			tempVertex.normal[1] = (float)normal4[1];
 			tempVertex.normal[2] = (float)normal4[2];
 
-			indexBuffer[f].indices[polyVertIndex] = bufferIndex;
-
-			bufferIndex++;
+			vertices[faceIndex] = tempVertex;
+			
 			bool pushBack = true;
-			for (int c = tempVertices.size() - 1; c >= 0; c--)
-				if (tempVertex.position[0] == tempVertices[c].position[0])
-					if (tempVertex.position[1] == tempVertices[c].position[1])
-						if (tempVertex.position[2] == tempVertices[c].position[2])
-							if (tempVertex.uv[0] == tempVertices[c].uv[0])
-								if (tempVertex.uv[1] == tempVertices[c].uv[1])
-									if (tempVertex.normal[0] == tempVertices[c].normal[0])
-										if (tempVertex.normal[1] == tempVertices[c].normal[1])
-											if (tempVertex.normal[2] == tempVertices[c].normal[2])
+			for (int c = faceIndex - 1; c >= 0; c--)
+				if (tempVertex.position[0] == vertices[c].position[0])
+					if (tempVertex.position[1] == vertices[c].position[1])
+						if (tempVertex.position[2] == vertices[c].position[2])
+							if (tempVertex.uv[0] == vertices[c].uv[0])
+								if (tempVertex.uv[1] == vertices[c].uv[1])
+									if (tempVertex.normal[0] == vertices[c].normal[0])
+										if (tempVertex.normal[1] == vertices[c].normal[1])
+											if (tempVertex.normal[2] == vertices[c].normal[2])
 											{
-												// Same vertex
-												bufferIndex--;
-												indexBuffer[f].indices[polyVertIndex] = indexBuffer[c].indices[polyVertIndex];
+												int faceAt = floor(c / 3);
+												int vertexAt = c % 3 ;
+
+												indexBuffer[f].indices[polyVertIndex] = indexBuffer[faceAt].indices[vertexAt];
+
+
 												pushBack = false;
 											}
 			if (pushBack)
+			{
+				indexBuffer[f].indices[polyVertIndex] = bufferIndex;
 				tempVertices.push_back(tempVertex);
+				bufferIndex++;
+			}
 
 
 			faceIndex++;
@@ -105,9 +112,9 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 
 	// Copy vertex and face data
 	mesh->vertexCount = bufferIndex;
-	mesh->faceCount = vtxCount;
+	mesh->faceCount = faceCount;
 	memcpy(mesh->vertices, newVertices, sizeof(Vertex) * bufferIndex);
-	memcpy(mesh->faces, indexBuffer, sizeof(Face) * vtxCount);
+	memcpy(mesh->faces, indexBuffer, sizeof(Face) * faceCount);
 
 
 	// MDelete the allocated memory for vertices
@@ -115,6 +122,8 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 		delete[] vertices;
 	if (indexBuffer)
 		delete[] indexBuffer;
+	if (newVertices)
+		delete[] newVertices;
 }
 
 void GetSkin(FbxMesh* fbxMesh, FbxGeometry* fbxGeo, MeshHolder* mesh)
