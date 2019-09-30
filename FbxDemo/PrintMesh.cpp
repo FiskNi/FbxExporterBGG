@@ -29,7 +29,7 @@ void GetMesh(FbxNode* fbxNode, MeshHolder* mesh, vector<PhongMaterial>& material
 void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 {
 	FbxVector4* lControlPoints = fbxMesh->GetControlPoints();
-
+	
 	// Get vertex positions
 	int vtxCount = fbxMesh->GetPolygonVertexCount();
 	Vertex *vertices = new Vertex[vtxCount];
@@ -39,6 +39,15 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 	int faceCount = fbxMesh->GetPolygonCount();
 	mesh->faces = new Face[faceCount];
 	Face* indexBuffer = new Face[faceCount];
+
+	// Temporary 
+	FbxGeometry* fbxGeo = (FbxGeometry*)fbxMesh;
+	vector<SkinData> controlPointSkinData(fbxMesh->GetControlPointsCount());
+	FbxSkin* skin = (FbxSkin*)fbxGeo->GetDeformer(0, FbxDeformer::eSkin);
+
+
+	MinMaxWeights(skin, controlPointSkinData);
+	GetVertexWeights(fbxMesh, controlPointSkinData, mesh);
 
 
 	vector<Vertex> tempVertices;
@@ -67,27 +76,44 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 			tempVertex.normal[1] = (float)normal4[1];
 			tempVertex.normal[2] = (float)normal4[2];
 
+			tempVertex.bone[0] = controlPointSkinData[vertexIndex].boneIndex[0];
+			tempVertex.bone[1] = controlPointSkinData[vertexIndex].boneIndex[1];
+			tempVertex.bone[2] = controlPointSkinData[vertexIndex].boneIndex[2];
+			tempVertex.bone[3] = controlPointSkinData[vertexIndex].boneIndex[3];
+
+			tempVertex.weight[0] = controlPointSkinData[vertexIndex].boneWeight[0];
+			tempVertex.weight[1] = controlPointSkinData[vertexIndex].boneWeight[1];
+			tempVertex.weight[2] = controlPointSkinData[vertexIndex].boneWeight[2];
+			tempVertex.weight[3] = controlPointSkinData[vertexIndex].boneWeight[3];
+
 			vertices[faceIndex] = tempVertex;
 			
 			bool pushBack = true;
 			for (int c = faceIndex - 1; c >= 0; c--)
-				if (tempVertex.position[0] == vertices[c].position[0])
-					if (tempVertex.position[1] == vertices[c].position[1])
-						if (tempVertex.position[2] == vertices[c].position[2])
-							if (tempVertex.uv[0] == vertices[c].uv[0])
-								if (tempVertex.uv[1] == vertices[c].uv[1])
-									if (tempVertex.normal[0] == vertices[c].normal[0])
-										if (tempVertex.normal[1] == vertices[c].normal[1])
-											if (tempVertex.normal[2] == vertices[c].normal[2])
-											{
-												int faceAt = floor(c / 3);
-												int vertexAt = c % 3 ;
+				if (tempVertex.position[0] == vertices[c].position[0]	&&
+					tempVertex.position[1] == vertices[c].position[1]	&&
+					tempVertex.position[2] == vertices[c].position[2]	&&
+					tempVertex.uv[0] == vertices[c].uv[0]				&&
+					tempVertex.uv[1] == vertices[c].uv[1]				&&
+					tempVertex.normal[0] == vertices[c].normal[0]		&&
+					tempVertex.normal[1] == vertices[c].normal[1]		&&
+					tempVertex.normal[2] == vertices[c].normal[2]		&&
+					tempVertex.bone[0] == vertices[c].bone[0]			&&
+					tempVertex.bone[1] == vertices[c].bone[1]			&&
+					tempVertex.bone[2] == vertices[c].bone[2]			&&
+					tempVertex.bone[3] == vertices[c].bone[3]			&&
+					tempVertex.weight[0] == vertices[c].weight[0]		&&
+					tempVertex.weight[1] == vertices[c].weight[1]		&&
+					tempVertex.weight[2] == vertices[c].weight[2]		&&
+					tempVertex.weight[3] == vertices[c].weight[3])
+				{
+					int faceAt = floor(c / 3);
+					int vertexAt = c % 3 ;
 
-												indexBuffer[f].indices[polyVertIndex] = indexBuffer[faceAt].indices[vertexAt];
+					indexBuffer[f].indices[polyVertIndex] = indexBuffer[faceAt].indices[vertexAt];
+					pushBack = false;
+				}
 
-
-												pushBack = false;
-											}
 			if (pushBack)
 			{
 				indexBuffer[f].indices[polyVertIndex] = bufferIndex;
@@ -107,15 +133,11 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 		newVertices[v] = tempVertices[v];
 	}
 
-
-
-
 	// Copy vertex and face data
 	mesh->vertexCount = bufferIndex;
 	mesh->faceCount = faceCount;
 	memcpy(mesh->vertices, newVertices, sizeof(Vertex) * bufferIndex);
 	memcpy(mesh->faces, indexBuffer, sizeof(Face) * faceCount);
-
 
 	// MDelete the allocated memory for vertices
 	if (vertices)
@@ -133,12 +155,8 @@ void GetSkin(FbxMesh* fbxMesh, FbxGeometry* fbxGeo, MeshHolder* mesh)
 	vector<SkinData> controlPointSkinData(fbxMesh->GetControlPointsCount());
 	FbxSkin* skin = (FbxSkin*)fbxGeo->GetDeformer(0, FbxDeformer::eSkin);
 
-	MinMaxWeights(skin, controlPointSkinData);
-	GetVertexWeights(fbxMesh, controlPointSkinData, mesh);
 	GetBindPose(skin, mesh, fbxMesh);
 	GetAnimation(fbxMesh, mesh, skin);
-	
-
 }
 
 void GetAnimation(fbxsdk::FbxMesh* fbxMesh, MeshHolder* mesh, fbxsdk::FbxSkin* skin)
@@ -229,7 +247,7 @@ void MinMaxWeights(fbxsdk::FbxSkin* skin, std::vector<SkinData>& controlPointSki
 	for (int boneIndex = 0; boneIndex < skin->GetClusterCount(); boneIndex++)
 	{
 		FbxCluster* cluster = skin->GetCluster(boneIndex);					// One cluster is a collection of weights for a bone
-		int* index = cluster->GetControlPointIndices();					// Control point indices for bone at boneIndex
+		int* index = cluster->GetControlPointIndices();						// Control point indices for bone at boneIndex
 		double* weights = cluster->GetControlPointWeights();				// matching weights for each vertex
 		for (int x = 0; x < cluster->GetControlPointIndicesCount(); x++)
 		{

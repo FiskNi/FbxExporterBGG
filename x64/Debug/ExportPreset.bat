@@ -1,1 +1,1 @@
-FbxDemo.exe -i C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\Files\UVTestCube.fbx -n UVTestCube
+FbxDemo.exe -i C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\Files\WalkingTest.fbx -n WalkingTest

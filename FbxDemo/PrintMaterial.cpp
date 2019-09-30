@@ -156,7 +156,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					for (int index = 0; index < strlen(filePath.c_str()); index++)
 					{
 						char temp = filePath[index];
-						if (temp == '.')
+						if (temp == '/')
 							pivotPos = index;
 					}
 					string fileExtension = filePath.substr(pivotPos + 1, strlen(filePath.c_str()));
@@ -169,7 +169,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					}
 					string albedoExtension = "_Albedo." + fileExtension;
 					string fileName = outputPath.substr(pivotPos+1, strlen(outputPath.c_str())) + albedoExtension;
-					string texOutputPath = outputPath + albedoExtension;
+					string texOutputPath = outputPath + fileExtension;
 					
 					std::ifstream in(filePath, ios_base::in | ios_base::binary);
 					std::ofstream out(texOutputPath, ios_base::out | ios_base::binary);
@@ -192,8 +192,8 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					//Send string to struct
 					for (int j = 0; j < strlen(texOutputPath.c_str()); j++)
 					{
-						materials[matIndex].albedo[j] = fileName[j];
-						materials[matIndex].albedo[strlen(fileName.c_str())] = '\0';
+						materials[matIndex].albedo[j] = fileExtension[j];
+						materials[matIndex].albedo[strlen(fileExtension.c_str())] = '\0';
 					}
 				} 
 
@@ -212,7 +212,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					for (int index = 0; index < strlen(filePath.c_str()); index++)
 					{
 						char temp = filePath[index];
-						if (temp == '.')
+						if (temp == '/')
 							pivotPos = index;
 					}
 					string fileExtension = filePath.substr(pivotPos + 1, strlen(filePath.c_str()));
@@ -225,7 +225,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					}
 					string normalExtension = "_Normal." + fileExtension;
 					string fileName = outputPath.substr(pivotPos + 1, strlen(outputPath.c_str())) + normalExtension;
-					string texOutputPath = outputPath + normalExtension;
+					string texOutputPath = outputPath + fileExtension;
 						
 					std::ifstream in(filePath, ios_base::in | ios_base::binary);
 					std::ofstream out(texOutputPath, ios_base::out | ios_base::binary);
@@ -247,8 +247,8 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 
 					for (int j = 0; j < strlen(texOutputPath.c_str()); j++)
 					{
-						materials[matIndex].normal[j] = fileName[j];
-						materials[matIndex].normal[strlen(fileName.c_str())] = '\0';
+						materials[matIndex].normal[j] = fileExtension[j];
+						materials[matIndex].normal[strlen(fileExtension.c_str())] = '\0';
 					}
 
 				}

@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 		if ((string)argv[i] == "-n")
 		{
 			outputName = argv[i + 1];
-			outputFilepath = outputFilepath += outputName;
+			//outputFilepath = outputFilepath += outputName;
 		}
 
 		if ((string)argv[i] == "-h")
@@ -276,7 +276,7 @@ int main(int argc, char** argv)
 		// Everything noted as *Binary data is what is going to be written to the binary file later on. Everything else are comments or debug information.
 		//	========================================================================
 		ofstream asciiFile2;
-		asciiFile2.open(outputFilepath + ".txt");
+		asciiFile2.open(outputFilepath + outputName + ".txt");
 
 		asciiFile2 << fixed << setprecision(10) ;
 
@@ -547,7 +547,7 @@ int main(int argc, char** argv)
 		// and format it in the same way upon reading.
 		//	========================================================================
 		std::cout << "Writing binary header..." << std::endl;
-		ofstream binaryFile(outputFilepath + ".mesh", ofstream::binary);	// This is where out the filepath should be added comming in from the CMD
+		ofstream binaryFile(outputFilepath + outputName + ".mesh", ofstream::binary);	// This is where out the filepath should be added comming in from the CMD
 		// - 1 File Header
 		binaryFile.write((char*)&fileHeader, sizeof(MehHeader));
 		// - 2 Groups
