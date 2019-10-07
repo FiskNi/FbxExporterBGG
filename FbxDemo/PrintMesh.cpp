@@ -45,9 +45,12 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 	vector<SkinData> controlPointSkinData(fbxMesh->GetControlPointsCount());
 	FbxSkin* skin = (FbxSkin*)fbxGeo->GetDeformer(0, FbxDeformer::eSkin);
 
+	if (fbxMesh->GetDeformerCount(FbxDeformer::eSkin) > 0)
+	{
+		MinMaxWeights(skin, controlPointSkinData);
+		GetVertexWeights(fbxMesh, controlPointSkinData, mesh);
+	}
 
-	MinMaxWeights(skin, controlPointSkinData);
-	GetVertexWeights(fbxMesh, controlPointSkinData, mesh);
 
 
 	vector<Vertex> tempVertices;
@@ -150,10 +153,8 @@ void GetPolygons(FbxMesh* fbxMesh, MeshHolder* mesh)
 
 void GetSkin(FbxMesh* fbxMesh, FbxGeometry* fbxGeo, MeshHolder* mesh)
 {
-	FbxVector4* controlPoints = fbxMesh->GetControlPoints();
-	// temporary vector for weights and indices, of the exact size;
-	vector<SkinData> controlPointSkinData(fbxMesh->GetControlPointsCount());
-	FbxSkin* skin = (FbxSkin*)fbxGeo->GetDeformer(0, FbxDeformer::eSkin);
+	vector<SkinData> controlPointSkinData(fbxGeo->GetControlPointsCount());
+	FbxSkin* skin = (FbxSkin*)fbxMesh->GetDeformer(0, FbxDeformer::eSkin);
 
 	GetBindPose(skin, mesh, fbxMesh);
 	GetAnimation(fbxMesh, mesh, skin);
@@ -187,8 +188,8 @@ void GetAnimation(fbxsdk::FbxMesh* fbxMesh, MeshHolder* mesh, fbxsdk::FbxSkin* s
 		for (int c = 0; c < NAME_SIZE; c++)
 			animation.name[c] = animationName[c];
 		animation.name[NAME_SIZE - 1] = '\0';
-		animation.keyframeFirst = startFrame;
-		animation.keyframeLast = endFrame;
+		animation.keyframeFirst = 0;
+		animation.keyframeLast = keyframeCount - 1;
 		animation.duration = (float)takeInfo->mLocalTimeSpan.GetDuration().GetSecondDouble();
 		animation.rate = (float)takeInfo->mLocalTimeSpan.GetDuration().GetFrameRate(FbxTime::EMode::eFrames24);
 
@@ -209,33 +210,24 @@ void GetAnimation(fbxsdk::FbxMesh* fbxMesh, MeshHolder* mesh, fbxsdk::FbxSkin* s
 			if (jointIndex == skeleton.joints.size())
 				cout << "ERROR!, Cluster Link " << linkName << " not found in Skeleton" << endl;;
 
-			for (int t = startFrame; t <= (int)endFrame - 1; t++)
+			int currFrame = startFrame;
+			for (int t = 0; t < keyframeCount; t++)
 			{
 				AnimationHolder::KeyFrameHolder& keyframe = animation.keyframes[t];
 
-				FbxTime curr;
-				curr.SetFrame(t, FbxTime::eFrames24);
+				FbxTime currentTime;
+				currentTime.SetFrame(currFrame, FbxTime::eFrames24);
+				currFrame++;
 
-				FbxAMatrix localJoint = cluster->GetLink()->EvaluateLocalTransform(curr);
+				FbxAMatrix localJoint = cluster->GetLink()->EvaluateLocalTransform(currentTime);
+
+				//FbxAMatrix localJoint2 = cluster->GetLink()->EvaluateGlobalTransform(currentTime);
+				//localJoint = localJoint.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(currentTime);
+
+				keyframe.jointId.push_back(jointIndex);
 				keyframe.localJointsR.push_back(localJoint.GetQ());
 				keyframe.localJointsT.push_back(localJoint.GetT());
 				keyframe.localJointsS.push_back(localJoint.GetS());
-			}
-		}
-
-		int bonesAmnt = (int)skeleton.joints.size();
-		for (int boneIndex = skin->GetClusterCount(); boneIndex < bonesAmnt; boneIndex++)
-		{
-			for (int t = startFrame; t <= (int)endFrame - 1; t++)
-			{
-				AnimationHolder::KeyFrameHolder& keyframe = animation.keyframes[t];
-
-				FbxVector4 fillv;
-				FbxQuaternion fillq;
-
-				keyframe.localJointsR.push_back(fillq);
-				keyframe.localJointsT.push_back(fillv);
-				keyframe.localJointsS.push_back(fillv);
 			}
 		}
 	}
@@ -249,6 +241,7 @@ void MinMaxWeights(fbxsdk::FbxSkin* skin, std::vector<SkinData>& controlPointSki
 		FbxCluster* cluster = skin->GetCluster(boneIndex);					// One cluster is a collection of weights for a bone
 		int* index = cluster->GetControlPointIndices();						// Control point indices for bone at boneIndex
 		double* weights = cluster->GetControlPointWeights();				// matching weights for each vertex
+
 		for (int x = 0; x < cluster->GetControlPointIndicesCount(); x++)
 		{
 			// Weights for one control point (vertex)
@@ -314,13 +307,12 @@ void GetBindPose(fbxsdk::FbxSkin* skin, MeshHolder* mesh, fbxsdk::FbxMesh* fbxMe
 	{
 		// References to the in-mesh for more readable code
 		SkeletonHolder& skeleton = mesh->skeleton;
-
 		FbxCluster* cluster = skin->GetCluster(boneIndex);
+		
 		char linkName[256];
 		for (int c = 0; c < NAME_SIZE; c++)
 			linkName[c] = cluster->GetLink()->GetName()[c];
 		linkName[NAME_SIZE - 1] = '\0';
-
 		int jointIndex = 0;
 		for (jointIndex; jointIndex < skeleton.joints.size(); jointIndex++)
 			if ((string)linkName == (string)skeleton.joints[jointIndex].name)
@@ -332,27 +324,158 @@ void GetBindPose(fbxsdk::FbxSkin* skin, MeshHolder* mesh, fbxsdk::FbxMesh* fbxMe
 		// this could account for an offset of the geometry from the bone?, usually identity.
 		FbxNode* fbxNode = fbxMesh->GetNode();
 
+		// Direct joint data where GetLink() returns the joint
+		/*FbxAMatrix globalTransform = cluster->GetLink()->EvaluateGlobalTransform();
+		FbxAMatrix globalTransformInv = cluster->GetLink()->EvaluateGlobalTransform().Inverse();
+		FbxAMatrix localTransform = cluster->GetLink()->EvaluateLocalTransform();
+		FbxAMatrix localpParent = cluster->GetLink()->GetParent()->EvaluateLocalTransform();
+		FbxAMatrix localppParent = cluster->GetLink()->EvaluateLocalTransform().Inverse() * cluster->GetLink()->GetParent()->EvaluateLocalTransform();
+		FbxVector4 lTranslation = cluster->GetLink()->LclTranslation.Get();*/
+
+
 		FbxAMatrix geometryTransform(
 			fbxNode->GetGeometricTranslation(FbxNode::eSourcePivot),
 			fbxNode->GetGeometricRotation(FbxNode::eSourcePivot),
 			fbxNode->GetGeometricScaling(FbxNode::eSourcePivot));
+		// This geometry transform is something I cannot understand
+		// I think it is from MotionBuilder
+		// If you are using Maya for your models, 99% this is just an identity matrix
+		// But I am taking it into account anyways......
 
-		FbxAMatrix meshGlobalTransform;
-		cluster->GetTransformMatrix(meshGlobalTransform);
+		FbxAMatrix transformMatrix;
+		cluster->GetTransformMatrix(transformMatrix);
+		//transform - the initial global transform of the mesh that the bone is controlling.
+		//These should be safe to ignore, apparently they are largely legacy and will be the same for every bone in the case of a single skinned mesh.
+		//If your artists do "Freeze Transformations", then this matrix would just be an identity matrix.
 
-		FbxAMatrix globalBindPoseTransform;
-		cluster->GetTransformLinkMatrix(globalBindPoseTransform);
+		FbxAMatrix transformLinkMatrix;
+		cluster->GetTransformLinkMatrix(transformLinkMatrix);
+		//transformLink - the bone's global transform at the moment of binding. From joint space to world space in Maya.
 
 		FbxAMatrix associateModelTransform;
 		cluster->GetTransformAssociateModelMatrix(associateModelTransform);
+		// TransformAssociateModel - this also appears to be ignored in FBX SDK example code,
+		// and is only needed dependant on the value of ELinkMode according to docs.
 
 		FbxAMatrix parentTransform;
-		cluster->GetTransformParentMatrix(associateModelTransform);
+		cluster->GetTransformParentMatrix(parentTransform);
 
-		FbxAMatrix invGlobalBindPose = globalBindPoseTransform.Inverse() * meshGlobalTransform * geometryTransform * associateModelTransform * parentTransform;
-		//FbxAMatrix invGlobalBindPose = globalBindPoseTransform.Inverse() * meshGlobalTransform * geometryTransform * associateModelTransform;
+		FbxAMatrix invGlobalBindPose = transformLinkMatrix.Inverse() * transformMatrix;// * geometryTransform * associateModelTransform * parentTransform;
+		//FbxAMatrix invGlobalBindPose = transformLinkMatrix.Inverse();
 		skeleton.joints[jointIndex].invBindPose = invGlobalBindPose;
+
+
+		//FbxAMatrix transformTest = CalculateGlobalTransform(cluster->GetLink());
+		//skeleton.joints[jointIndex].invBindPose = transformTest.Inverse();
+
+
 	}
+}
+
+FbxAMatrix CalculateGlobalTransform(FbxNode* pNode)
+{
+	FbxAMatrix lTranlationM, lScalingM, lScalingPivotM, lScalingOffsetM, lRotationOffsetM, lRotationPivotM, \
+		lPreRotationM, lRotationM, lPostRotationM, lTransform;
+
+	FbxAMatrix lParentGX, lGlobalT, lGlobalRS;
+
+	if (!pNode)
+	{
+		lTransform.SetIdentity();
+		return lTransform;
+	}
+
+	// Construct translation matrix
+	FbxVector4 lTranslation = pNode->LclTranslation.Get();
+	lTranlationM.SetT(lTranslation);
+
+	// Construct rotation matrices
+	FbxVector4 lRotation = pNode->LclRotation.Get();
+	FbxVector4 lPreRotation = pNode->PreRotation.Get();
+	FbxVector4 lPostRotation = pNode->PostRotation.Get();
+	lRotationM.SetR(lRotation);
+	lPreRotationM.SetR(lPreRotation);
+	lPostRotationM.SetR(lPostRotation);
+
+	// Construct scaling matrix
+	FbxVector4 lScaling = pNode->LclScaling.Get();
+	lScalingM.SetS(lScaling);
+
+	// Construct offset and pivot matrices
+	FbxVector4 lScalingOffset = pNode->ScalingOffset.Get();
+	FbxVector4 lScalingPivot = pNode->ScalingPivot.Get();
+	FbxVector4 lRotationOffset = pNode->RotationOffset.Get();
+	FbxVector4 lRotationPivot = pNode->RotationPivot.Get();
+	lScalingOffsetM.SetT(lScalingOffset);
+	lScalingPivotM.SetT(lScalingPivot);
+	lRotationOffsetM.SetT(lRotationOffset);
+	lRotationPivotM.SetT(lRotationPivot);
+
+	// Calculate the global transform matrix of the parent node
+	FbxNode* lParentNode = pNode->GetParent();
+	if (lParentNode)
+	{
+		lParentGX = CalculateGlobalTransform(lParentNode);
+	}
+	else
+	{
+		lParentGX.SetIdentity();
+	}
+
+	//Construct Global Rotation
+	FbxAMatrix lLRM, lParentGRM;
+	FbxVector4 lParentGR = lParentGX.GetR();
+	lParentGRM.SetR(lParentGR);
+	lLRM = lPreRotationM * lRotationM * lPostRotationM;
+
+	//Construct Global Shear*Scaling
+	//FBX SDK does not support shear, to patch this, we use:
+	//Shear*Scaling = RotationMatrix.Inverse * TranslationMatrix.Inverse * WholeTranformMatrix
+	FbxAMatrix lLSM, lParentGSM, lParentGRSM, lParentTM;
+	FbxVector4 lParentGT = lParentGX.GetT();
+	lParentTM.SetT(lParentGT);
+	lParentGRSM = lParentTM.Inverse() * lParentGX;
+	lParentGSM = lParentGRM.Inverse() * lParentGRSM;
+	lLSM = lScalingM;
+
+	//Do not consider translation now
+	FbxTransform::EInheritType lInheritType = pNode->InheritType.Get();
+	if (lInheritType == FbxTransform::eInheritRrSs)
+	{
+		lGlobalRS = lParentGRM * lLRM * lParentGSM * lLSM;
+	}
+	else if (lInheritType == FbxTransform::eInheritRSrs)
+	{
+		lGlobalRS = lParentGRM * lParentGSM * lLRM * lLSM;
+	}
+	else if (lInheritType == FbxTransform::eInheritRrs)
+	{
+		FbxAMatrix lParentLSM;
+		FbxVector4 lParentLS = lParentNode->LclScaling.Get();
+		lParentLSM.SetS(lParentLS);
+
+		FbxAMatrix lParentGSM_noLocal = lParentGSM * lParentLSM.Inverse();
+		lGlobalRS = lParentGRM * lLRM * lParentGSM_noLocal * lLSM;
+	}
+	else
+	{
+		FBXSDK_printf("error, unknown inherit type! \n");
+	}
+
+	// Construct translation matrix
+	// Calculate the local transform matrix
+	lTransform = lTranlationM * lRotationOffsetM * lRotationPivotM * lPreRotationM * lRotationM * lPostRotationM * lRotationPivotM.Inverse()\
+		* lScalingOffsetM * lScalingPivotM * lScalingM * lScalingPivotM.Inverse();
+	FbxVector4 lLocalTWithAllPivotAndOffsetInfo = lTransform.GetT();
+	// Calculate global translation vector according to: 
+	// GlobalTranslation = ParentGlobalTransform * LocalTranslationWithPivotAndOffsetInfo
+	FbxVector4 lGlobalTranslation = lParentGX.MultT(lLocalTWithAllPivotAndOffsetInfo);
+	lGlobalT.SetT(lGlobalTranslation);
+
+	//Construct the whole global transform
+	lTransform = lGlobalT * lGlobalRS;
+
+	return lTransform;
 }
 
 // Recursive function going through all the children
@@ -368,6 +491,10 @@ void GetSkeleton(FbxNode* fbxNode, int nodeIndex, int parent, MeshHolder* meshTo
 		newJoint.parentIndex = parent;
 		newJoint.invBindPose;					// Only here for code readability, FbxAMatrix is default identity
 		meshToPopulate->skeleton.joints.push_back(newJoint);
+
+		if (parent == 0)
+			for (int c = 0; c < NAME_SIZE; c++)
+				meshToPopulate->skeleton.name[c] = meshToPopulate->skeleton.joints[0].name[c];
 	}
 	for (int index = 0; index < fbxNode->GetChildCount(); index++)
 		GetSkeleton(fbxNode->GetChild(index), (int)meshToPopulate->skeleton.joints.size(), nodeIndex, meshToPopulate);

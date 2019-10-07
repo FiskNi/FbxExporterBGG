@@ -161,6 +161,8 @@ struct Animation
 	float	duration;
 	float	rate;
 	int		keyframeCount;
+
+	//char	mesh[NAME_SIZE];
 };
 
 // Keyframe data (parsed)
@@ -172,6 +174,7 @@ struct KeyFrame
 
 struct Transform
 {
+	int joinId;
 	float	transform[3];
 	float	rotate[4];
 	float	scale[3];
@@ -229,7 +232,7 @@ struct AnimationHolder
 {
 	struct KeyFrameHolder
 	{
-		int id;
+		vector<int>				jointId;
 		// local transform, good for interpolation and then making a final global.
 		vector<FbxVector4>		localJointsT;
 		vector<FbxQuaternion>	localJointsR;
@@ -255,7 +258,7 @@ struct SkeletonHolder
 
 	char name[NAME_SIZE];
 	vector<JointHolder> joints;
-	vector<AnimationHolder> animations;
+	vector<AnimationHolder> animations;	
 };
 
 struct MeshHolder
@@ -270,13 +273,11 @@ struct MeshHolder
 	char parentName[256];
 	int parentType;
 
-	// Might make this into a vector
-	//vector<Vertex> vertices;
 	int vertexCount;
 	int faceCount;
-
 	Vertex* vertices;
 	Face* faces;
+	
 	SkeletonHolder skeleton;
 
 	// Constructor that may not be needed

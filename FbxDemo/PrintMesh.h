@@ -27,3 +27,5 @@ void GetSkeleton(FbxNode* fbxNode, int nodeIndex, int parent, MeshHolder* meshTo
 
 FbxVector2 GetUV(FbxLayerElementUV* uvElement, int faceIndex, int vertexIndex);
 FbxVector4 GetNormal(FbxGeometryElementNormal* normalElement, int faceIndex, int vertexIndex);
+
+FbxAMatrix CalculateGlobalTransform(FbxNode* pNode);

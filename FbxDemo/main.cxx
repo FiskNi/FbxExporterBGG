@@ -160,12 +160,13 @@ int main(int argc, char** argv)
 		//	===================================================================
 		// ==== Header ====
 		fileHeader.meshCount		= (int)meshData.size();
-		fileHeader.groupCount		= (int)groups.size();;
+		fileHeader.groupCount		= (int)groups.size();
 		fileHeader.materialCount	= (int)materials.size();
 		fileHeader.dirLightCount	= (int)dirLights.size();
 		fileHeader.pointLightCount	= (int)pointLight.size();
 
 		// ==== Meshes ====
+		cout << "Parsing data..." << endl;
 		for (int i = 0; i < meshData.size(); i++)
 		{
 			Mesh fillMesh;
@@ -241,7 +242,7 @@ int main(int argc, char** argv)
 				{
 					KeyFrame fillKey;
 					// This expects all the transforms to be filled equally (no transform is an identity matrix
-					fillKey.transformCount = (int)meshData[i].skeleton.animations[a].keyframes[k].localJointsR.size();
+					fillKey.transformCount = (int)meshData[i].skeleton.animations[a].keyframes[k].localJointsT.size();
 					anisD[i].animations[a].keyFrames[k].key = fillKey;
 
 					// Transforms
@@ -249,6 +250,9 @@ int main(int argc, char** argv)
 					for (int t = 0; t < fillKey.transformCount; t++)
 					{
 						Transform fillTr;
+						
+						fillTr.joinId = (int)meshData[i].skeleton.animations[a].keyframes[k].jointId[t];
+
 						for (int v = 0; v < 3; v++)
 							fillTr.transform[v] = (float)meshData[i].skeleton.animations[a].keyframes[k].localJointsT[t][v];
 						for (int v = 0; v < 4; v++)
@@ -259,8 +263,29 @@ int main(int argc, char** argv)
 						anisD[i].animations[a].keyFrames[k].transforms[t].t = fillTr;
 					}
 
+					for (int v = 0; v < meshData[i].vertexCount; v++)
+					{
+						for (int t = 0; t < fillKey.transformCount; t++)
+						{
+							if (meshData[i].vertices[v].bone[0] == t)
+								meshData[i].vertices[v].bone[0] = anisD[i].animations[a].keyFrames[k].transforms[t].t.joinId;
+							if (meshData[i].vertices[v].bone[1] == t)
+								meshData[i].vertices[v].bone[1] = anisD[i].animations[a].keyFrames[k].transforms[t].t.joinId;
+							if (meshData[i].vertices[v].bone[2] == t)
+								meshData[i].vertices[v].bone[2] = anisD[i].animations[a].keyFrames[k].transforms[t].t.joinId;
+							if (meshData[i].vertices[v].bone[3] == t)
+								meshData[i].vertices[v].bone[3] = anisD[i].animations[a].keyFrames[k].transforms[t].t.joinId;
+						}
+					}
+
+
+
+
+
 				}
 			}
+
+			
 
 			meshes.push_back(fillMesh);
 		}
@@ -372,8 +397,8 @@ int main(int argc, char** argv)
 			asciiFile2 << "    Animation count: " << endl;
 			asciiFile2 << meshes[i].skeleton.aniCount << endl;
 
-		
 			// ========================================================= Vertices
+			std::cout << "Writing ascii mesh vertices" << i << "..." << std::endl;
 			asciiFile2 << "    //v Mesh " << i << " Vertices " << " --------------------" << endl;
 			for (int j = 0; j < meshes[i].vertexCount; j++)
 			{
@@ -391,6 +416,7 @@ int main(int argc, char** argv)
 			// ======================== ~
 
 			// ========================================================= Faces
+			std::cout << "Writing ascii faces" << i << "..." << std::endl;
 			asciiFile2 << "    //v Mesh " << i << " Faces " << " --------------------" << endl;
 			for (int f = 0; f < meshes[i].faceCount; f++)
 			{
@@ -452,13 +478,16 @@ int main(int argc, char** argv)
 					KeyFrame& keyRef = anisD[i].animations[a].keyFrames[k].key;
 
 					asciiFile2 << "    ~ " << k << " Keyframe" << endl;
+					asciiFile2 << "id: " << endl;
+					asciiFile2 << keyRef.id << endl;
 					asciiFile2 << "transforms: " << endl;
 					asciiFile2 << keyRef.transformCount << endl;
 					// ========================================================= Transforms
 					for (int t = 0; t < keyRef.transformCount; t++)
 					{
 						Transform& traRef = anisD[i].animations[a].keyFrames[k].transforms[t].t;
-						asciiFile2 << "        * " << t << " transform / rotate / scale: " << endl;
+						asciiFile2 << "        * " << t << " joint id / transform / rotate / scale: " << endl;
+						asciiFile2 << traRef.joinId << endl;
 						for (int v = 0; v < 3; v++)
 							asciiFile2 << traRef.transform[v] << " ";
 						asciiFile2 << endl;
@@ -793,7 +822,6 @@ void PrintContent(FbxNode* pNode, vector<Group>& groups, vector<MeshHolder>& mes
 	for (int i = 0; i < pNode->GetChildCount(); i++)
 	{
 		PrintContent(pNode->GetChild(i), groups, meshes, mats, dirLight, pointLight, camera, true, parentType, wg, wme, wma, ws, wa, wl, outputPath);
-		//PrintContent(pNode->GetChild(i), &fillMesh, &fillDirLight, &fillSpotLight, mats);
 	}
 }
 
