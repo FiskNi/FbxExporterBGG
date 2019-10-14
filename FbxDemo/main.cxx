@@ -114,7 +114,6 @@ int main(int argc, char** argv)
 		ios->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
 		lResult = lImporter->Import(fileScene);
 
-
 		
 		//	===== Data collection ==================================================
 		//	This is where all the data from the FBX scene is collected.
@@ -387,7 +386,7 @@ int main(int argc, char** argv)
 			asciiFile2 << meshes[i].vertexCount << endl;			//* Binary data
 
 			asciiFile2 << "  # Face count: " << endl;
-			asciiFile2 << meshes[i].faceCount << endl;			//* Binary data
+			asciiFile2 << meshes[i].faceCount << endl;				//* Binary data
 			
 			// 3.7 Skeleton
 			asciiFile2 << "    Joint count: " << endl;

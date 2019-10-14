@@ -156,7 +156,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					for (int index = 0; index < strlen(filePath.c_str()); index++)
 					{
 						char temp = filePath[index];
-						if (temp == '/')
+						if (temp == '/' || temp == '\\')
 							pivotPos = index;
 					}
 					string fileExtension = filePath.substr(pivotPos + 1, strlen(filePath.c_str()));
@@ -164,7 +164,7 @@ void PrintMaterial(FbxGeometry* pGeometry, vector<PhongMaterial>& mats, MeshHold
 					for (int index = 0; index < strlen(outputPath.c_str()); index++)
 					{
 						char temp = outputPath[index];
-						if (temp == '/')
+						if (temp == '/' || temp == '\\')
 							pivotPos = index;
 					}
 					string albedoExtension = "_Albedo." + fileExtension;

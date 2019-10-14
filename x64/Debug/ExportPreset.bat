@@ -1,1 +1,1 @@
-FbxDemo.exe -i C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\Files\ElGoblino.fbx -n ElGoblino
+FbxDemo.exe -i C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\Files\TestSphere.fbx -n TestSphere

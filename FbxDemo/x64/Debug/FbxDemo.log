@@ -1,6 +1,2 @@
-﻿  main.cxx
-C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\main.cxx(271,94): warning C4244:  '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\main.cxx(273,94): warning C4244:  '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\main.cxx(275,94): warning C4244:  '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\FbxDemo\main.cxx(277,94): warning C4244:  '=': conversion from 'int' to 'float', possible loss of data
+﻿  PrintMaterial.cpp
   FbxDemo.vcxproj -> C:\Users\fisk0\Documents\GitHub\FBX-Exporter-v2\x64\Debug\FbxDemo.exe
